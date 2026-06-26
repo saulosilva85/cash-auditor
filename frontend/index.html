@@ -57,19 +57,33 @@
 
       <!-- ===================== DASHBOARD ===================== -->
       <section class="view" id="view-dashboard">
+        <div class="filterbar" id="filtro-dashboard">
+          <span class="filter-ico">📅</span>
+          <div class="field-inline"><label>De</label><input type="date" id="dash-inicio"></div>
+          <div class="field-inline"><label>Até</label><input type="date" id="dash-fim"></div>
+          <button class="btn primary sm" id="dash-aplicar">Aplicar</button>
+          <button class="btn ghost sm" id="dash-limpar">Limpar</button>
+          <div class="presets">
+            <button class="chip" data-dpreset="hoje">Hoje</button>
+            <button class="chip" data-dpreset="7">7 dias</button>
+            <button class="chip" data-dpreset="30">30 dias</button>
+            <button class="chip" data-dpreset="mes">Este mês</button>
+          </div>
+          <span class="periodo-atual" id="dash-periodo">Período: hoje</span>
+        </div>
         <div class="kpis">
           <div class="kpi">
-            <span class="kpi-label">Valor contado hoje</span>
+            <span class="kpi-label" id="lbl-valor">Valor contado hoje</span>
             <span class="kpi-value" id="kpi-valor">R$ 0</span>
             <span class="kpi-foot" id="kpi-valor-geral">Acumulado: R$ 0</span>
           </div>
           <div class="kpi">
-            <span class="kpi-label">Cédulas hoje</span>
+            <span class="kpi-label" id="lbl-cedulas">Cédulas hoje</span>
             <span class="kpi-value" id="kpi-cedulas">0</span>
             <span class="kpi-foot" id="kpi-rejeitadas">0 rejeitadas</span>
           </div>
           <div class="kpi">
-            <span class="kpi-label">Contagens hoje</span>
+            <span class="kpi-label" id="lbl-contagens">Contagens hoje</span>
             <span class="kpi-value" id="kpi-contagens">0</span>
             <span class="kpi-foot">em todas as agências</span>
           </div>
@@ -83,13 +97,13 @@
         <div class="grid-2">
           <div class="card">
             <div class="card-head">
-              <h2>Valor por hora (24h)</h2>
+              <h2 id="title-horaria">Valor por hora (24h)</h2>
             </div>
             <div class="chart-wrap"><canvas id="chart-horaria"></canvas></div>
           </div>
           <div class="card">
             <div class="card-head">
-              <h2>Cédulas por denominação (hoje)</h2>
+              <h2 id="title-denom">Cédulas por denominação (hoje)</h2>
             </div>
             <div class="chart-wrap"><canvas id="chart-denom"></canvas></div>
           </div>
@@ -97,7 +111,7 @@
 
         <div class="grid-2">
           <div class="card">
-            <div class="card-head"><h2>Ranking de agências (hoje)</h2></div>
+            <div class="card-head"><h2 id="title-ranking">Ranking de agências (hoje)</h2></div>
             <div class="table-wrap">
               <table class="table">
                 <thead>
@@ -155,6 +169,20 @@
 
       <!-- ===================== CONTAGENS ===================== -->
       <section class="view hidden" id="view-contagens">
+        <div class="filterbar" id="filtro-contagens">
+          <span class="filter-ico">📅</span>
+          <div class="field-inline"><label>De</label><input type="date" id="cont-inicio"></div>
+          <div class="field-inline"><label>Até</label><input type="date" id="cont-fim"></div>
+          <button class="btn primary sm" id="cont-aplicar">Aplicar</button>
+          <button class="btn ghost sm" id="cont-limpar">Limpar</button>
+          <div class="presets">
+            <button class="chip" data-cpreset="hoje">Hoje</button>
+            <button class="chip" data-cpreset="7">7 dias</button>
+            <button class="chip" data-cpreset="30">30 dias</button>
+            <button class="chip" data-cpreset="mes">Este mês</button>
+          </div>
+          <span class="periodo-atual" id="cont-periodo">Período: tudo</span>
+        </div>
         <div class="card">
           <div class="card-head"><h2>Histórico de contagens</h2></div>
           <div class="table-wrap">

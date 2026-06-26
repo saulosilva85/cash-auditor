@@ -151,3 +151,5 @@ class DashboardResumo(BaseModel):
     por_denominacao: list[ResumoDenominacao]
     top_agencias: list[AgenciaResumo]
     serie_horaria: list[dict]
+    periodo_label: str = "hoje"
+    serie_titulo: str = "Valor por hora (24h)"

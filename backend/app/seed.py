@@ -94,32 +94,48 @@ def seed(num_agencias: int = 40) -> None:
         for c in contadoras:
             session.refresh(c)
 
-        # Contagens das últimas 24h.
+        # Contagens: últimas 24h (ricas) + histórico dos 30 dias anteriores,
+        # para que o filtro de período tenha dados ao longo do tempo.
         total = 0
-        for c in contadoras:
-            for _ in range(random.randint(2, 8)):
-                denoms = _contagem_aleatoria()
-                valor = float(
-                    sum(VALOR_DENOMINACAO.get(k, 0) * v for k, v in denoms.items())
+
+        def _registrar(c: Contadora, quando: datetime) -> None:
+            nonlocal total
+            denoms = _contagem_aleatoria()
+            valor = float(
+                sum(VALOR_DENOMINACAO.get(k, 0) * v for k, v in denoms.items())
+            )
+            cedulas = sum(denoms.values())
+            session.add(
+                Contagem(
+                    contadora_id=c.id,
+                    agencia_id=c.agencia_id,
+                    valor_total=valor,
+                    total_cedulas=cedulas,
+                    cedulas_rejeitadas=random.randint(0, 8),
+                    denominacoes=denoms,
+                    operador=random.choice(OPERADORES),
+                    lote=f"LOTE-{random.randint(1000, 9999)}",
+                    finalizada_em=quando,
                 )
-                cedulas = sum(denoms.values())
+            )
+            total += 1
+
+        for c in contadoras:
+            # Hoje (últimas 24h).
+            for _ in range(random.randint(2, 8)):
                 quando = agora - timedelta(
                     hours=random.randint(0, 23), minutes=random.randint(0, 59)
                 )
-                session.add(
-                    Contagem(
-                        contadora_id=c.id,
-                        agencia_id=c.agencia_id,
-                        valor_total=valor,
-                        total_cedulas=cedulas,
-                        cedulas_rejeitadas=random.randint(0, 8),
-                        denominacoes=denoms,
-                        operador=random.choice(OPERADORES),
-                        lote=f"LOTE-{random.randint(1000, 9999)}",
-                        finalizada_em=quando,
+                _registrar(c, quando)
+            # Histórico: dias 1 a 30 atrás.
+            for dia in range(1, 31):
+                for _ in range(random.randint(0, 3)):
+                    quando = agora - timedelta(
+                        days=dia,
+                        hours=random.randint(0, 23),
+                        minutes=random.randint(0, 59),
                     )
-                )
-                total += 1
+                    _registrar(c, quando)
         session.commit()
         print(
             f"Seed concluído: {len(agencias)} agências, "

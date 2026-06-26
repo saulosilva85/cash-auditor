@@ -1,6 +1,8 @@
 """Ingestão e consulta de contagens (núcleo do tempo real)."""
 from __future__ import annotations
 
+from datetime import date, datetime, time, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
@@ -84,6 +86,8 @@ async def ingerir_contagem(
 def listar_contagens(
     agencia_id: int | None = None,
     contadora_id: int | None = None,
+    inicio: date | None = Query(default=None, description="Data inicial (AAAA-MM-DD)"),
+    fim: date | None = Query(default=None, description="Data final (AAAA-MM-DD)"),
     limite: int = Query(default=50, le=500),
     session: Session = Depends(get_session),
 ) -> list[ContagemRead]:
@@ -92,5 +96,15 @@ def listar_contagens(
         query = query.where(Contagem.agencia_id == agencia_id)
     if contadora_id is not None:
         query = query.where(Contagem.contadora_id == contadora_id)
+    if inicio or fim:
+        d_ini = inicio or fim
+        d_fim = fim or inicio
+        if d_fim < d_ini:
+            d_ini, d_fim = d_fim, d_ini
+        ini_dt = datetime.combine(d_ini, time.min, tzinfo=timezone.utc)
+        fim_dt = datetime.combine(d_fim, time.max, tzinfo=timezone.utc)
+        query = query.where(Contagem.finalizada_em >= ini_dt).where(
+            Contagem.finalizada_em <= fim_dt
+        )
     contagens = session.exec(query).all()
     return [_enriquecer(session, c) for c in contagens]

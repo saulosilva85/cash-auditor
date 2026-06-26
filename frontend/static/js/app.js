@@ -11,6 +11,10 @@
     contadoras: [],
     charts: {},
     feed: [],
+    periodo: {
+      dashboard: { inicio: "", fim: "" },
+      contagens: { inicio: "", fim: "" },
+    },
   };
 
   const VIEW_META = {
@@ -30,6 +34,32 @@
   const fmtDateTime = (iso) => {
     try { return new Date(iso).toLocaleString("pt-BR"); } catch { return "—"; }
   };
+  const toISODate = (d) => {
+    const tz = d.getTimezoneOffset() * 60000;
+    return new Date(d - tz).toISOString().slice(0, 10);
+  };
+  // Constrói "?inicio=...&fim=..." a partir de um período {inicio, fim}.
+  function periodoQuery(p) {
+    const params = new URLSearchParams();
+    if (p.inicio) params.set("inicio", p.inicio);
+    if (p.fim) params.set("fim", p.fim);
+    const s = params.toString();
+    return s ? `&${s}` : "";
+  }
+  // Resolve um preset ("hoje" | "7" | "30" | "mes") em {inicio, fim} (ISO).
+  function resolvePreset(preset) {
+    const hoje = new Date();
+    const fim = toISODate(hoje);
+    if (preset === "hoje") return { inicio: fim, fim };
+    if (preset === "mes") {
+      const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      return { inicio: toISODate(ini), fim };
+    }
+    const dias = parseInt(preset, 10) || 7;
+    const ini = new Date(hoje);
+    ini.setDate(ini.getDate() - (dias - 1));
+    return { inicio: toISODate(ini), fim };
+  }
 
   async function api(path, options = {}) {
     const res = await fetch(`/api${path}`, {
@@ -69,7 +99,8 @@
 
   // ---------------- dashboard ----------------
   async function loadDashboard() {
-    const d = await api("/dashboard/resumo");
+    const p = state.periodo.dashboard;
+    const d = await api(`/dashboard/resumo?_=1${periodoQuery(p)}`);
     $("#kpi-valor").textContent = brl(d.valor_total_hoje);
     $("#kpi-valor-geral").textContent = `Acumulado: ${brl(d.valor_total_geral)}`;
     $("#kpi-cedulas").textContent = num(d.total_cedulas_hoje);
@@ -79,6 +110,17 @@
     $("#kpi-total-contadoras").textContent = `/${d.total_contadoras}`;
     $("#kpi-agencias").textContent = `${d.total_agencias} agências`;
 
+    // Rótulos dinâmicos conforme o período selecionado.
+    const ehHoje = d.periodo_label === "hoje";
+    const suf = ehHoje ? "hoje" : "no período";
+    $("#lbl-valor").textContent = `Valor contado ${suf}`;
+    $("#lbl-cedulas").textContent = `Cédulas ${suf}`;
+    $("#lbl-contagens").textContent = `Contagens ${suf}`;
+    $("#title-horaria").textContent = d.serie_titulo;
+    $("#title-denom").textContent = `Cédulas por denominação (${d.periodo_label})`;
+    $("#title-ranking").textContent = `Ranking de agências (${d.periodo_label})`;
+    $("#dash-periodo").textContent = `Período: ${d.periodo_label}`;
+
     renderRanking(d.top_agencias);
     renderChartHoraria(d.serie_horaria);
     renderChartDenom(d.por_denominacao);
@@ -86,7 +128,7 @@
 
   function renderRanking(rows) {
     const tb = $("#tbl-ranking");
-    if (!rows.length) { tb.innerHTML = `<tr><td colspan="5" class="empty">Sem contagens hoje</td></tr>`; return; }
+    if (!rows.length) { tb.innerHTML = `<tr><td colspan="5" class="empty">Sem contagens no período</td></tr>`; return; }
     tb.innerHTML = rows.map((r) => `
       <tr>
         <td><strong>${r.codigo}</strong> · ${r.nome}</td>
@@ -270,7 +312,12 @@
 
   // ---------------- contagens ----------------
   async function loadContagens() {
-    const rows = await api("/contagens?limite=200");
+    const p = state.periodo.contagens;
+    const rows = await api(`/contagens?limite=200${periodoQuery(p)}`);
+    const temPeriodo = p.inicio || p.fim;
+    $("#cont-periodo").textContent = `Período: ${
+      temPeriodo ? `${p.inicio || "…"} – ${p.fim || "…"}` : "tudo"
+    }`;
     const tb = $("#tbl-contagens");
     if (!rows.length) { tb.innerHTML = `<tr><td colspan="8" class="empty">Nenhuma contagem registrada</td></tr>`; return; }
     tb.innerHTML = rows.map((c) => `
@@ -352,6 +399,55 @@
     }
   }
 
+  // ---------------- filtros de período ----------------
+  function bindFiltros() {
+    // Dashboard
+    $("#dash-aplicar").addEventListener("click", () => {
+      state.periodo.dashboard = {
+        inicio: $("#dash-inicio").value,
+        fim: $("#dash-fim").value,
+      };
+      loadDashboard().catch((e) => toast("Erro ao filtrar", e.message, "error"));
+    });
+    $("#dash-limpar").addEventListener("click", () => {
+      $("#dash-inicio").value = "";
+      $("#dash-fim").value = "";
+      state.periodo.dashboard = { inicio: "", fim: "" };
+      loadDashboard().catch(() => {});
+    });
+    $$("#filtro-dashboard .chip").forEach((b) =>
+      b.addEventListener("click", () => {
+        const r = resolvePreset(b.dataset.dpreset);
+        $("#dash-inicio").value = r.inicio;
+        $("#dash-fim").value = r.fim;
+        state.periodo.dashboard = r;
+        loadDashboard().catch((e) => toast("Erro ao filtrar", e.message, "error"));
+      }));
+
+    // Contagens
+    $("#cont-aplicar").addEventListener("click", () => {
+      state.periodo.contagens = {
+        inicio: $("#cont-inicio").value,
+        fim: $("#cont-fim").value,
+      };
+      loadContagens().catch((e) => toast("Erro ao filtrar", e.message, "error"));
+    });
+    $("#cont-limpar").addEventListener("click", () => {
+      $("#cont-inicio").value = "";
+      $("#cont-fim").value = "";
+      state.periodo.contagens = { inicio: "", fim: "" };
+      loadContagens().catch(() => {});
+    });
+    $$("#filtro-contagens .chip").forEach((b) =>
+      b.addEventListener("click", () => {
+        const r = resolvePreset(b.dataset.cpreset);
+        $("#cont-inicio").value = r.inicio;
+        $("#cont-fim").value = r.fim;
+        state.periodo.contagens = r;
+        loadContagens().catch((e) => toast("Erro ao filtrar", e.message, "error"));
+      }));
+  }
+
   // ---------------- events ----------------
   function bindEvents() {
     $$(".nav-item").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
@@ -368,6 +464,8 @@
         catch (e) { toast("Erro ao salvar", e.message, "error"); }
       }
     });
+
+    bindFiltros();
 
     $("#btn-nova-agencia").addEventListener("click", () =>
       openModal("Nova agência", agenciaForm(), async (data) => {
