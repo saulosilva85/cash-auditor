@@ -13,5 +13,10 @@ venv/
 .env
 .env.local
 
+# Build do executável (PyInstaller)
+build/
+dist/
+*.spec.bak
+
 # Sistema
 .DS_Store
