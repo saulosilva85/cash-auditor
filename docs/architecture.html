@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Arquitetura — Cash Auditor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: radial-gradient(1000px 500px at 80% -10%, rgba(91,140,255,0.18), transparent 60%),
+                radial-gradient(800px 400px at -10% 110%, rgba(25,195,156,0.12), transparent 60%), #0b1020;
+    color: #e8ecf6; padding: 40px; width: 1280px;
+  }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+  .sub { color: #8b97b8; margin-top: 6px; font-size: 15px; margin-bottom: 34px; }
+  .diagram { display: flex; align-items: stretch; gap: 0; }
+  .col { display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+  .agencias { flex: 0 0 360px; }
+  .arrows { flex: 0 0 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  .central { flex: 1; }
+  .managers { flex: 0 0 300px; }
+
+  .box {
+    background: linear-gradient(160deg, #151d36, #1b2542);
+    border: 1px solid #243154; border-radius: 16px; padding: 16px 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .agency { border-left: 4px solid #5b8cff; }
+  .agency h3 { font-size: 15px; margin-bottom: 10px; }
+  .machine {
+    display: flex; align-items: center; gap: 10px; background: #11182e;
+    border: 1px solid #243154; border-radius: 11px; padding: 9px 12px; margin-top: 8px; font-size: 13px;
+  }
+  .machine .ico { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+    background: rgba(91,140,255,0.16); color: #7aa2ff; font-size: 15px; }
+  .dots { text-align: center; color: #8b97b8; font-size: 26px; letter-spacing: 4px; }
+
+  .central-box { border: 1px solid #2c3a63; border-radius: 20px; padding: 22px; background: linear-gradient(160deg, rgba(91,140,255,0.10), #151d36); }
+  .central-box > h2 { font-size: 17px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .tag { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: rgba(247,201,72,0.18); color: #f7c948; }
+  .layer { background: #11182e; border: 1px solid #243154; border-radius: 12px; padding: 13px 15px; margin-bottom: 12px; }
+  .layer .t { font-weight: 700; font-size: 14px; }
+  .layer .d { font-size: 12px; color: #8b97b8; margin-top: 3px; }
+  .api { border-left: 4px solid #19c39c; }
+  .db { border-left: 4px solid #f7c948; }
+  .web { border-left: 4px solid #a78bfa; }
+
+  .arrow { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+  .arrow .label { font-size: 11.5px; color: #8b97b8; text-align: center; }
+  .line { width: 100%; height: 2px; background: linear-gradient(90deg, #5b8cff, #19c39c); position: relative; }
+  .line::after { content: "▶"; position: absolute; right: -2px; top: -8px; color: #19c39c; font-size: 13px; }
+  .line.back { background: linear-gradient(90deg, #ff8b96, #f7c948); }
+  .line.back::after { color: #f7c948; }
+
+  .mgr { border-left: 4px solid #19c39c; }
+  .mgr h3 { font-size: 15px; margin-bottom: 6px; }
+  .mgr p { font-size: 12.5px; color: #8b97b8; }
+  .live { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; color: #ff8b96;
+    background: rgba(255,93,108,0.14); padding: 4px 10px; border-radius: 999px; margin-top: 10px; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: #ff5d6c; }
+  .footer { margin-top: 30px; color: #8b97b8; font-size: 13px; display: flex; gap: 22px; }
+  .footer b { color: #e8ecf6; }
+</style>
+</head>
+<body>
+  <h1>Cash Auditor — Arquitetura</h1>
+  <div class="sub">Contagem de cédulas em tempo real · 1 central + 100+ agências · cada agência com 1–2 contadoras</div>
+
+  <div class="diagram">
+    <!-- Agências -->
+    <div class="col agencias">
+      <div class="box agency">
+        <h3>🏦 Agência 0002 · Norte</h3>
+        <div class="machine"><span class="ico">🖥️</span> Contadora 01 + agente</div>
+        <div class="machine"><span class="ico">🖥️</span> Contadora 02 + agente</div>
+      </div>
+      <div class="box agency">
+        <h3>🏦 Agência 0003 · Sul</h3>
+        <div class="machine"><span class="ico">🖥️</span> Contadora 01 + agente</div>
+      </div>
+      <div class="dots">⋮ &nbsp; 100+ agências &nbsp; ⋮</div>
+    </div>
+
+    <!-- Arrows in -->
+    <div class="col arrows">
+      <div class="arrow">
+        <div class="label">contagem concluída<br/><b>POST /api/contagens/ingest</b><br/>(HTTP + api_key)</div>
+        <div class="line"></div>
+      </div>
+    </div>
+
+    <!-- Central -->
+    <div class="col central">
+      <div class="central-box">
+        <h2>🏛️ Servidor Central <span class="tag">AGÊNCIA 0001</span></h2>
+        <div class="layer api"><div class="t">API — FastAPI (REST + WebSocket)</div><div class="d">Cadastros · ingestão de contagens · broadcast</div></div>
+        <div class="layer db"><div class="t">Banco de dados</div><div class="d">SQLite (dev) → PostgreSQL (produção)</div></div>
+        <div class="layer web"><div class="t">Frontend SPA — Dashboards</div><div class="d">KPIs · gráficos · ranking · feed ao vivo</div></div>
+      </div>
+    </div>
+
+    <!-- Arrows out -->
+    <div class="col arrows">
+      <div class="arrow">
+        <div class="label">push em tempo real<br/><b>WebSocket /ws</b><br/>(evento: nova_contagem)</div>
+        <div class="line back"></div>
+      </div>
+    </div>
+
+    <!-- Managers -->
+    <div class="col managers">
+      <div class="box mgr">
+        <h3>👔 Gerentes</h3>
+        <p>Visualizam o dashboard no navegador. Cada nova contagem aparece instantaneamente, sem recarregar a página.</p>
+        <span class="live"><span class="pulse"></span> AO VIVO</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div><b>Ingestão:</b> HTTP (qualquer linguagem)</div>
+    <div><b>Tempo real:</b> WebSocket broadcast</div>
+    <div><b>Auth:</b> api_key por contadora</div>
+    <div><b>Escala:</b> Redis Pub/Sub opcional</div>
+  </div>
+</body>
+</html>
