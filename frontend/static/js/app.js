@@ -38,6 +38,11 @@
     const tz = d.getTimezoneOffset() * 60000;
     return new Date(d - tz).toISOString().slice(0, 10);
   };
+  // Converte "AAAA-MM-DD" em "DD/MM/AAAA" para exibição.
+  const fmtDiaBR = (iso) => {
+    const [y, m, d] = (iso || "").split("-");
+    return d ? `${d}/${m}/${y}` : iso;
+  };
   // Constrói "?inicio=...&fim=..." a partir de um período {inicio, fim}.
   function periodoQuery(p) {
     const params = new URLSearchParams();
@@ -68,7 +73,12 @@
     });
     if (!res.ok) {
       let detail = res.statusText;
-      try { detail = (await res.json()).detail || detail; } catch {}
+      try {
+        const body = await res.json();
+        if (typeof body.detail === "string") detail = body.detail;
+        else if (Array.isArray(body.detail)) detail = body.detail.map((e) => e.msg).join("; ");
+        else if (body.detail) detail = JSON.stringify(body.detail);
+      } catch {}
       throw new Error(detail);
     }
     if (res.status === 204) return null;
@@ -315,9 +325,13 @@
     const p = state.periodo.contagens;
     const rows = await api(`/contagens?limite=200${periodoQuery(p)}`);
     const temPeriodo = p.inicio || p.fim;
-    $("#cont-periodo").textContent = `Período: ${
-      temPeriodo ? `${p.inicio || "…"} – ${p.fim || "…"}` : "tudo"
-    }`;
+    let periodoTxt = "tudo";
+    if (temPeriodo) {
+      periodoTxt = p.inicio && p.inicio === p.fim
+        ? fmtDiaBR(p.inicio)
+        : `${fmtDiaBR(p.inicio) || "…"} – ${fmtDiaBR(p.fim) || "…"}`;
+    }
+    $("#cont-periodo").textContent = `Período: ${periodoTxt}`;
     const tb = $("#tbl-contagens");
     if (!rows.length) { tb.innerHTML = `<tr><td colspan="8" class="empty">Nenhuma contagem registrada</td></tr>`; return; }
     tb.innerHTML = rows.map((c) => `
