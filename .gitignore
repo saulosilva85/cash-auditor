@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Banco de dados local
+*.db
+*.sqlite3
+
+# Ambiente
+.env
+.env.local
+
+# Sistema
+.DS_Store

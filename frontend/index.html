@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cash Auditor — Contagem de Cédulas em Tempo Real</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <script src="/static/js/chart.umd.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">₵</div>
+        <div class="brand-text">
+          <span class="brand-name">Cash Auditor</span>
+          <span class="brand-sub">Central de Tesouraria</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">
+          <span class="nav-ico">▣</span> Dashboard
+        </button>
+        <button class="nav-item" data-view="agencias">
+          <span class="nav-ico">🏦</span> Agências
+        </button>
+        <button class="nav-item" data-view="contadoras">
+          <span class="nav-ico">🖥️</span> Contadoras
+        </button>
+        <button class="nav-item" data-view="contagens">
+          <span class="nav-ico">🧾</span> Contagens
+        </button>
+      </nav>
+      <div class="conn">
+        <span id="conn-dot" class="conn-dot off"></span>
+        <span id="conn-label">conectando…</span>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="view-title">Visão Geral</h1>
+          <p id="view-sub" class="muted">Monitoramento em tempo real da rede de agências</p>
+        </div>
+        <div class="topbar-right">
+          <div class="clock" id="clock">--:--:--</div>
+          <button class="btn ghost" id="btn-refresh">↻ Atualizar</button>
+        </div>
+      </header>
+
+      <!-- ===================== DASHBOARD ===================== -->
+      <section class="view" id="view-dashboard">
+        <div class="filterbar" id="filtro-dashboard">
+          <span class="filter-ico">📅</span>
+          <div class="field-inline"><label>De</label><input type="date" id="dash-inicio"></div>
+          <div class="field-inline"><label>Até</label><input type="date" id="dash-fim"></div>
+          <button class="btn primary sm" id="dash-aplicar">Aplicar</button>
+          <button class="btn ghost sm" id="dash-limpar">Limpar</button>
+          <div class="presets">
+            <button class="chip" data-dpreset="hoje">Hoje</button>
+            <button class="chip" data-dpreset="7">7 dias</button>
+            <button class="chip" data-dpreset="30">30 dias</button>
+            <button class="chip" data-dpreset="mes">Este mês</button>
+          </div>
+          <span class="periodo-atual" id="dash-periodo">Período: hoje</span>
+        </div>
+        <div class="kpis">
+          <div class="kpi">
+            <span class="kpi-label" id="lbl-valor">Valor contado hoje</span>
+            <span class="kpi-value" id="kpi-valor">R$ 0</span>
+            <span class="kpi-foot" id="kpi-valor-geral">Acumulado: R$ 0</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label" id="lbl-cedulas">Cédulas hoje</span>
+            <span class="kpi-value" id="kpi-cedulas">0</span>
+            <span class="kpi-foot" id="kpi-rejeitadas">0 rejeitadas</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label" id="lbl-contagens">Contagens hoje</span>
+            <span class="kpi-value" id="kpi-contagens">0</span>
+            <span class="kpi-foot">em todas as agências</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Contadoras online</span>
+            <span class="kpi-value"><span id="kpi-online">0</span><span class="kpi-of" id="kpi-total-contadoras">/0</span></span>
+            <span class="kpi-foot" id="kpi-agencias">0 agências</span>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h2 id="title-horaria">Valor por hora (24h)</h2>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-horaria"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h2 id="title-denom">Cédulas por denominação (hoje)</h2>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-denom"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h2 id="title-ranking">Ranking de agências (hoje)</h2></div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>Agência</th><th>Região</th><th class="num">Valor</th><th class="num">Cédulas</th><th class="num">Online</th></tr>
+                </thead>
+                <tbody id="tbl-ranking"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h2>Contagens em tempo real</h2>
+              <span class="pill live"><span class="pulse"></span> AO VIVO</span>
+            </div>
+            <ul class="feed" id="feed"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== AGÊNCIAS ===================== -->
+      <section class="view hidden" id="view-agencias">
+        <div class="card">
+          <div class="card-head">
+            <h2>Agências cadastradas</h2>
+            <button class="btn primary" id="btn-nova-agencia">+ Nova agência</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>Código</th><th>Nome</th><th>Cidade</th><th>Região</th><th>Gerente</th><th class="num">Contadoras</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="tbl-agencias"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CONTADORAS ===================== -->
+      <section class="view hidden" id="view-contadoras">
+        <div class="card">
+          <div class="card-head">
+            <h2>Contadoras cadastradas</h2>
+            <button class="btn primary" id="btn-nova-contadora">+ Nova contadora</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>Série</th><th>Agência</th><th>Modelo</th><th>Fabricante</th><th>IP</th><th>Chave (API)</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="tbl-contadoras"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CONTAGENS ===================== -->
+      <section class="view hidden" id="view-contagens">
+        <div class="filterbar" id="filtro-contagens">
+          <span class="filter-ico">📅</span>
+          <div class="field-inline"><label>De</label><input type="date" id="cont-inicio"></div>
+          <div class="field-inline"><label>Até</label><input type="date" id="cont-fim"></div>
+          <button class="btn primary sm" id="cont-aplicar">Aplicar</button>
+          <button class="btn ghost sm" id="cont-limpar">Limpar</button>
+          <div class="presets">
+            <button class="chip" data-cpreset="hoje">Hoje</button>
+            <button class="chip" data-cpreset="7">7 dias</button>
+            <button class="chip" data-cpreset="30">30 dias</button>
+            <button class="chip" data-cpreset="mes">Este mês</button>
+          </div>
+          <span class="periodo-atual" id="cont-periodo">Período: tudo</span>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Histórico de contagens</h2></div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>Quando</th><th>Agência</th><th>Contadora</th><th>Operador</th><th class="num">Valor</th><th class="num">Cédulas</th><th class="num">Rejeitadas</th><th>Lote</th></tr>
+              </thead>
+              <tbody id="tbl-contagens"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toasts -->
+  <div class="toasts" id="toasts"></div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop hidden" id="modal-backdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modal-title">Título</h3>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <form id="modal-form" class="modal-body"></form>
+      <div class="modal-foot">
+        <button class="btn ghost" id="modal-cancel">Cancelar</button>
+        <button class="btn primary" id="modal-save">Salvar</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
