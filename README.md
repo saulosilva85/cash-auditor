@@ -94,6 +94,49 @@ Content-Type: application/json
 O servidor calcula `valor_total` e `total_cedulas` automaticamente (se não
 enviados), grava no banco e transmite o resultado para os dashboards.
 
+## Executável para Windows Server (`cash_auditor.exe`)
+
+Para instalar no servidor da central **sem precisar de Python**, o projeto gera um
+executável único `cash_auditor.exe` (API + dashboard embutidos). Ao iniciar, ele
+sobe o servidor e abre o dashboard no navegador (`http://localhost:8000`).
+
+**Onde baixar o `.exe`:** ele é compilado automaticamente pelo GitHub Actions
+(runner Windows) a cada push na `main`. Baixe em **Actions → workflow
+`build-windows-exe` → run mais recente → artifact `cash_auditor-exe`**. Ao criar
+uma tag `vX.Y.Z`, o `.exe` também é anexado à **Release**.
+
+> O workflow está versionado em [`docs/ci/build-windows.yml`](docs/ci/build-windows.yml)
+> e precisa ser movido **uma vez** para `.github/workflows/` para ativar (veja
+> [`docs/deploy-windows.md`](docs/deploy-windows.md)).
+
+**Instalação no servidor (homologação → produção):**
+
+1. Copie o `cash_auditor.exe` para uma pasta no servidor (ex.: `C:\CashAuditor\`).
+2. Dê um duplo-clique (ou rode pelo Prompt). O banco **SQLite** é criado ao lado
+   do `.exe` (`cash_auditor.db`) e persiste entre reinícios.
+3. Acesse o dashboard em `http://localhost:8000` (ou pelo IP do servidor na rede).
+
+**Variáveis de ambiente úteis** (defina antes de iniciar):
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `CASH_AUDITOR_HOST` | `127.0.0.1` | Use `0.0.0.0` para aceitar acesso de outras máquinas da rede. |
+| `CASH_AUDITOR_PORT` | `8000` | Porta do servidor. |
+| `CASH_AUDITOR_NO_BROWSER` | — | `1` para não abrir o navegador (útil ao rodar como serviço). |
+| `DATABASE_URL` | SQLite ao lado do `.exe` | Em produção, aponte para PostgreSQL. |
+
+O passo a passo completo (rodar como **serviço do Windows**, liberar firewall,
+promover de homologação para produção e backup) está em
+[`docs/deploy-windows.md`](docs/deploy-windows.md).
+
+**Compilar o `.exe` localmente** (opcional, exige Windows com Python):
+
+```powershell
+pip install -r packaging/requirements-build.txt
+pyinstaller packaging/cash_auditor.spec --noconfirm
+# resultado em dist/cash_auditor.exe
+```
+
 ## Estrutura do projeto
 
 ```
@@ -115,8 +158,13 @@ frontend/
   static/js/chart.umd.min.js
 simulator/
   simulator.py         # simula contadoras enviando contagens
+packaging/
+  launcher.py          # ponto de entrada do executável (sobe uvicorn + abre o navegador)
+  cash_auditor.spec    # configuração do PyInstaller (gera cash_auditor.exe)
+  requirements-build.txt
 docs/
   architecture.md      # diagramas (Mermaid) e decisões de projeto
+  deploy-windows.md    # instalação no Windows Server (homologação → produção)
 ```
 
 ## Configuração
@@ -124,3 +172,6 @@ docs/
 | Variável | Padrão | Descrição |
 |---|---|---|
 | `DATABASE_URL` | `sqlite:///backend/cash_auditor.db` | Conexão do banco. Em produção, use PostgreSQL. |
+| `CASH_AUDITOR_HOST` | `127.0.0.1` | Host do executável. Use `0.0.0.0` para acesso pela rede. |
+| `CASH_AUDITOR_PORT` | `8000` | Porta do executável. |
+| `CASH_AUDITOR_NO_BROWSER` | — | `1` para não abrir o navegador ao iniciar o `.exe`. |
